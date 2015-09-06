@@ -6,7 +6,7 @@ class Server:
         self.board = Board(player)
 
     def turn():
-        self
+        pass
 
 class Board:
     SIZE = 6
