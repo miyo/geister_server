@@ -27,3 +27,12 @@ Geister用のゲームサーバ(作りかけ)．
  - 自分の手番によらず同じ方向(5の側が自陣，0の側が相手陣)
 - 後手にコマをうたせ，結果の盤面を両者に送信，以下，勝敗がつくまで先手後手を繰り返す
 
+## デバッグ
+    %run
+    b = Board()
+    p0 = Player()
+    p1 = Player()
+    b.set_player(p0, 0)
+    b.set_player(p0, 1)
+    b.print_board
+    
