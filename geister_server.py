@@ -5,7 +5,7 @@ class Server:
         self.player = [Player() for i in range(2)]
         self.board = Board(player)
 
-    def turn():
+    def turn(self):
         pass
 
 class Board:
