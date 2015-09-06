@@ -28,7 +28,7 @@ Geister用のゲームサーバ(作りかけ)．
 - 後手にコマをうたせ，結果の盤面を両者に送信，以下，勝敗がつくまで先手後手を繰り返す
 
 ## デバッグ
-    %run
+    %run geister_server
     b = Board()
     p0 = Player()
     p1 = Player()
