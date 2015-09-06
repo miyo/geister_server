@@ -3,7 +3,7 @@ class Server:
 
     def __init__(self):
         self.player = [Player() for i in range(2)]
-        self.baord = Board(player)
+        self.board = Board(player)
 
     def turn():
         self
