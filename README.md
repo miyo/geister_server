@@ -34,5 +34,5 @@ Geister用のゲームサーバ(作りかけ)．
     p1 = Player()
     b.set_player(p0, 0)
     b.set_player(p0, 1)
-    b.print_board
+    b.print_board()
     
