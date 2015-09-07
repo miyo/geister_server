@@ -43,7 +43,7 @@ class Board:
             self.player[turn] = player
 
     def print_board(self):
-        print("0 1 2 3 4 5 6")
+        print("  0 1 2 3 4 5")
         for y in range(0, 6):
             print(y, end=" ")
             for x in range(0, 6):
