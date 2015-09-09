@@ -1,10 +1,25 @@
-class Server:
-    """Server class for Geister"""
 
+import re
+
+class GeisterServer(object):
+    """
+    Server class for Geister.
+    This is a singleton class.
+    """
+    
+    __instance = None
+    def __new__(cls):
+        if cls.__instance is None:
+            cls.__instance = super(GeisterServer,cls).__new__(cls)
+            cls.__instance.__initialized = False
+        return GeisterServer.__instance
+    
     def __init__(self):
-        self.player = [Player() for i in range(2)]
-        self.connection = [None for i in range(2)]
-        self.board = Board()
+        if(self.__initialized):
+            return
+        self.__initialized = True
+        self.player = [Player(), Player()]
+        self.board = Board(self.player)
 
     def start(self):
         """
@@ -16,28 +31,57 @@ class Server:
     def turn(self):
         pass
 
+    __SET_COMMAND = re.compile('^SET:(\w*)')
+    __MOV_COMMAND = re.compile('^MOV:(\w*),(\w*)')
+
+    def command(self, mesg, pid):
+        print(mesg)
+        m = GeisterServer.__SET_COMMAND.match(mesg)
+        if m :
+            self.player[pid].set_items_color(m.group(1), ItemColor.RED)
+            return True
+        
+        m = GeisterServer.__MOV_COMMAND.match(mesg)
+        if m :
+            arg = m.group(2)
+            d = None
+            if arg == "NORTH":
+                d = Direction.NORTH
+            elif arg == "EAST":
+                d = Direction.EAST
+            elif arg == "WEST":
+                d = Direction.WEST
+            elif arg == "SOUTH":
+                d = Direction.SOUTH
+                
+            if d != None:
+                r = self.player[pid].move_item(m.group(1), d)
+                return r
+            else:
+                return False
+        
+        else:
+            return False
+
+    def print_board(self):
+        self.board.print_board()
+
 class Board:
     SIZE = 6
     ESCAPED_MARK = 8
     TAKEN_MARK = 9
     
-    def __init__(self):
-        self.player = [None, None]
-
-    def set_player(self, player, turn):
-        """
-        player
-        turn: 0 or 1
-        """
-        player.set_board(self)
-        self.player[turn] = player
+    def __init__(self, players):
+        self.players = players
+        players[0].set_board(self)
+        players[1].set_board(self)
 
     def get_board(self, player):
         """
         player: viewing player
         """
         board = [None for i in range(Board.SIZE*Board.SIZE)]
-        for p in self.player:
+        for p in self.players:
             for item in p.items.values():
                 x = item.x
                 y = item.y
@@ -51,7 +95,7 @@ class Board:
 
     def taken_items(self):
         lst = []
-        for p in self.player:
+        for p in self.players:
             for item in p.items.values():
                 if item.x == Board.TAKEN_MARK:
                     lst.append(item)
@@ -59,18 +103,18 @@ class Board:
 
     def escaped_items(self):
         lst = []
-        for p in self.player:
+        for p in self.players:
             for item in p.items.values():
                 if item.x == Board.ESCAPED_MARK:
                     lst.append(item)
         return lst
 
     def orderd_items(self, i):
-        keys = [i for i in self.player[i].items.keys()]
+        keys = [i for i in self.players[i].items.keys()]
         keys.sort()
         v = []
         for k in keys:
-            v.append(self.player[i].items[k])
+            v.append(self.players[i].items[k])
         return v
 
     def print_board(self):
@@ -87,7 +131,7 @@ class Board:
           2nd turn(1)
         """
         # print board information
-        board = self.get_board(self.player[1])
+        board = self.get_board(self.players[1])
         print("  0 1 2 3 4 5")
         for y in range(0, 6):
             print(y, end=" ")
@@ -96,7 +140,7 @@ class Board:
                 s = " "
                 if item != None:
                     s = item.name
-                    if item.player == self.player[0]:
+                    if item.player == self.players[0]:
                         s = s.lower()
                 print(s, end=" ")
             print("")
@@ -116,12 +160,12 @@ class Board:
         print("taken 1st player's items: ", end="")
         lst = self.taken_items()
         for i in lst:
-            if i != None and i.player == self.player[0]:
+            if i != None and i.player == self.players[0]:
                 print(i.name.lower() + ":" + ItemColor.to_str(i.color), end=" ")
         print ("")
         print("taken 2nd player's items: ", end="")
         for i in lst:
-            if i != None and i.player == self.player[1]:
+            if i != None and i.player == self.players[1]:
                 print(i.name + ":" + ItemColor.to_str(i.color), end=" ")
         print ("")
         
@@ -129,12 +173,12 @@ class Board:
         print("escaped 1st player's items: ", end="")
         lst = self.escaped_items()
         for i in lst:
-            if i != None and i.player == self.player[0]:
+            if i != None and i.player == self.players[0]:
                 print(i.name.lower() + ":" + ItemColor.to_str(i.color), end=" ")
         print ("")
         print("escaped 2nd player's items: ", end="")
         for i in lst:
-            if i != None and i.player == self.player[1]:
+            if i != None and i.player == self.players[1]:
                 print(i.name + ":" + ItemColor.to_str(i.color), end=" ")
         print ("")
         
@@ -168,6 +212,7 @@ class Player:
         self.board = board
 
     def set_items_color(self, lst, color):
+        print("set_items_color:" + lst)
         for i in lst:
             self.items[i].set_color(color)
 
@@ -176,6 +221,7 @@ class Player:
         @n: target item name
         @d: move direction
         """
+        print("move_item:" + n)
         return self.items[n].move(d)
 
 class Direction:
@@ -217,6 +263,7 @@ class Item:
 
         x = self.x
         y = self.y
+
         # move in inter-board
         if d == Direction.NORTH and self.y > 0:
             y = y - 1
@@ -228,6 +275,8 @@ class Item:
             y = y + 1
         else:
             return False
+
+        print(str(self.x) + "," + str(self.y) + " -> " + str(x) + "," + str(y))
 
         item = self.player.board.get_item(self.player, x, y)
         if item != None:
@@ -259,13 +308,11 @@ class ItemColor:
         return s
             
 def test():
-    b = Board()
     p0 = Player()
     p1 = Player()
+    b = Board([p0, p1])
     p0.set_items_color("BCDE", ItemColor.RED)
     p1.set_items_color("ACEG", ItemColor.RED)
-    b.set_player(p0, 0)
-    b.set_player(p1, 1)
     b.print_board()
     flag = p0.move_item("A", Direction.NORTH)
     print(flag)
