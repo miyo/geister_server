@@ -51,14 +51,15 @@ Geister用のゲームサーバ(作りかけ)．
     In [124]: s.connect(("localhost", 10000)); s.recv(4096)
     Out[124]: b'SET?'
     In [125]: s.send(b"SET:ABCD\r\n"); s.recv(4096) # クライアント1のSETコマンド完了(In[157])までブロック
-    Out[125]: b'14R24R34R44R15B25B35B45B41u31u21u11u40u30u20u10u'
+    Out[125]: b'14R24R34R44R15B25B35B45B41u31u21u11u40u30u20u10u' # クライアント1のSETコマンド完了(In[157])の結果，サーバから送られてきた
     In [126]: s.send(b"MOV:A,NORTH\r\n"); s.recv(4096) # クライアント1のMOVコマンド完了(In[158])までブロック
-    Out[126]: b'13R24R34R44R15B25B35B45B42u31u21u11u40u30u20u10u'
+    Out[126]: b'13R24R34R44R15B25B35B45B42u31u21u11u40u30u20u10u' # クライアント1のMOVコマンド完了(In[158])の結果，サーバから送られてきた
+    In [127]: # 次の手を送る
 
 ### クライアント1(後手番):
     In [155]: s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     In [156]: s.connect(("localhost", 10001)); s.recv(4096)
     Out[156]: b'SET?'
     In [157]: s.send(b"SET:BCDE\r\n"); s.recv(4096) # クライアント0のMOVコマンド完了(In[126])までブロック
-    Out[157]: b'14B24R34R44R15R25B35B45B42u31u21u11u40u30u20u10u'
-    In [158]: s.send(b"MOV:A,NORTH\r\n"); s.recv(4096) # クライアント0の次のMOVコマンド完了までブロック
+    Out[157]: b'14B24R34R44R15R25B35B45B42u31u21u11u40u30u20u10u'# クライアント0のMOVコマンド完了(In[126])の結果，サーバーから送られてきた
+    In [158]: s.send(b"MOV:A,NORTH\r\n"); s.recv(4096) # クライアント0の次のMOVコマンド完了(In[127])までブロック
