@@ -13,6 +13,11 @@ class GeisterServer(object):
             cls.__instance = super(GeisterServer,cls).__new__(cls)
             cls.__instance.__initialized = False
         return GeisterServer.__instance
+
+    WAIT_FOR_INITIALIZATION = 1
+    WAIT_FOR_PLAYER0 = 2
+    WAIT_FOR_PLAYER1 = 3
+    WAIT_FOR_GAMEEND = 4
     
     def __init__(self):
         if(self.__initialized):
@@ -20,6 +25,8 @@ class GeisterServer(object):
         self.__initialized = True
         self.player = [Player(), Player()]
         self.board = Board(self.player)
+        self.set_done = [False, False]
+        self.__status = GeisterServer.WAIT_FOR_INITIALIZATION
 
     def start(self):
         """
@@ -31,40 +38,52 @@ class GeisterServer(object):
     def turn(self):
         pass
 
+    def status(self):
+        return self.__status
+
     __SET_COMMAND = re.compile('^SET:(\w*)')
     __MOV_COMMAND = re.compile('^MOV:(\w*),(\w*)')
 
     def command(self, mesg, pid):
+        print("comamnd")
         print(mesg)
-        m = GeisterServer.__SET_COMMAND.match(mesg)
-        if m :
-            self.player[pid].set_items_color(m.group(1), ItemColor.RED)
-            return True
-        
-        m = GeisterServer.__MOV_COMMAND.match(mesg)
-        if m :
-            arg = m.group(2)
-            d = None
-            if arg == "NORTH":
-                d = Direction.NORTH
-            elif arg == "EAST":
-                d = Direction.EAST
-            elif arg == "WEST":
-                d = Direction.WEST
-            elif arg == "SOUTH":
-                d = Direction.SOUTH
-                
-            if d != None:
-                r = self.player[pid].move_item(m.group(1), d)
-                return r
+        flag = False
+        if self.__status == GeisterServer.WAIT_FOR_INITIALIZATION:
+            m = GeisterServer.__SET_COMMAND.match(mesg)
+            if m and len(m.group(1)) == 4 and self.set_done[pid] == False:
+                self.player[pid].set_items_color("ABCDEFGH", ItemColor.BLUE) # clear
+                self.player[pid].set_items_color(m.group(1).upper(), ItemColor.RED)
+                self.set_done[pid] = True
+                if self.set_done[0] and self.set_done[1]:
+                    self.__status = GeisterServer.WAIT_FOR_PLAYER0
+                flag = True
             else:
-                return False
-        
+                flag = False
+            
+        elif (self.__status == GeisterServer.WAIT_FOR_PLAYER0 and pid == 0) or (self.__status == GeisterServer.WAIT_FOR_PLAYER1 and pid == 1):
+            m = GeisterServer.__MOV_COMMAND.match(mesg)
+            if m :
+                k = m.group(1).upper()
+                d = Direction.dir(m.group(2).upper())
+                if d != None and ord("A") <= ord(k) and ord(k) <= ord("H") :
+                    flag = self.player[pid].move_item(k, d)
+                    if self.__status == GeisterServer.WAIT_FOR_PLAYER0:
+                        self.__status = GeisterServer.WAIT_FOR_PLAYER1
+                    else:
+                        self.__status = GeisterServer.WAIT_FOR_PLAYER0
+                else:
+                    flag = False
+
         else:
-            return False
+            flag = False
+        print(flag)
+        return flag
+
+    def encode_board(self, pid):
+        return self.board.encode_board(pid)
 
     def print_board(self):
-        self.board.print_board()
+        return self.board.print_board()
 
 class Board:
     SIZE = 6
@@ -109,7 +128,7 @@ class Board:
                     lst.append(item)
         return lst
 
-    def orderd_items(self, i):
+    def ordered_items(self, i):
         keys = [i for i in self.players[i].items.keys()]
         keys.sort()
         v = []
@@ -117,6 +136,39 @@ class Board:
             v.append(self.players[i].items[k])
         return v
 
+    def encode_item(self, item, mine):
+        x = item.x
+        y = item.x
+        c = item.color
+        s = ""
+        if mine:
+            if item.is_public():
+                s = str(x) + str(y) + ItemColor.to_str(c).lower()
+            else:
+                s = str(x) + str(y) + ItemColor.to_str(c).upper()
+        else:
+            if item.is_public():
+                # x and y should not be rotated, because they are TAKEN_MARK or ESCAPED_MARK.
+                s = str(x) + str(y) + ItemColor.to_str(c).lower()
+            else:
+                s = str(5-x) + str(5-y) + "u"
+        return s
+
+    def encode_board(self, pid):
+        """
+        in secret: red/blue = R/B
+        in public: red/blue/unknown = r/b/u
+        ex. 14R24R34R44R15B25B35B45B41u31u21u11u40u30u20u10u
+        """
+        s = ""
+        items = self.ordered_items(pid)
+        for i in items:
+            s += self.encode_item(i, True)
+        items = self.ordered_items(1 if pid == 0 else 0)
+        for i in items:
+            s += self.encode_item(i, False)
+        return s
+            
     def print_board(self):
         """
         print board information by 2nd player's viewing
@@ -148,13 +200,13 @@ class Board:
             
         # print all items
         print("1st player's items: ", end="")
-        for i in self.orderd_items(0):
+        for i in self.ordered_items(0):
             print(i.name.lower() + ":" + ItemColor.to_str(i.color), end=" ")
-        print ("")
+        print("")
         print("2nd player's items: ", end="")
-        for i in self.orderd_items(1):
+        for i in self.ordered_items(1):
             print(i.name + ":" + ItemColor.to_str(i.color), end=" ")
-        print ("")
+        print("")
         
         # print taken items
         print("taken 1st player's items: ", end="")
@@ -162,12 +214,12 @@ class Board:
         for i in lst:
             if i != None and i.player == self.players[0]:
                 print(i.name.lower() + ":" + ItemColor.to_str(i.color), end=" ")
-        print ("")
+        print("")
         print("taken 2nd player's items: ", end="")
         for i in lst:
             if i != None and i.player == self.players[1]:
                 print(i.name + ":" + ItemColor.to_str(i.color), end=" ")
-        print ("")
+        print("")
         
         # print escaped items
         print("escaped 1st player's items: ", end="")
@@ -175,13 +227,15 @@ class Board:
         for i in lst:
             if i != None and i.player == self.players[0]:
                 print(i.name.lower() + ":" + ItemColor.to_str(i.color), end=" ")
-        print ("")
+        print("")
         print("escaped 2nd player's items: ", end="")
         for i in lst:
             if i != None and i.player == self.players[1]:
                 print(i.name + ":" + ItemColor.to_str(i.color), end=" ")
-        print ("")
-        
+        print("")
+        print("1st player's view:" + self.encode_board(0))
+        print("2nd player's view:" + self.encode_board(1))
+        print("")
 
     def get_item(self, player, x, y):
         """
@@ -229,6 +283,18 @@ class Direction:
     EAST = 1
     WEST = 2
     SOUTH = 3
+
+    def dir(arg):
+        d = None
+        if arg == "NORTH":
+            d = Direction.NORTH
+        elif arg == "EAST":
+            d = Direction.EAST
+        elif arg == "WEST":
+            d = Direction.WEST
+        elif arg == "SOUTH":
+            d = Direction.SOUTH
+        return d
 
 class Item:
     """Definition of Item"""
@@ -294,6 +360,9 @@ class Item:
 
     def color(self):
         self.color
+        
+    def is_public(self):
+        return self.x == Board.TAKEN_MARK or self.x == Board.ESCAPED_MARK
 
 class ItemColor:
     RED = 1

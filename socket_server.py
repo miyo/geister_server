@@ -3,7 +3,7 @@ import select
 
 from geister_server import GeisterServer
 
-def exec_command(sock, str, pid):
+def exec_command(sock, conn, str, pid):
     r = True
     while True:
         i = str.find('\r\n')
@@ -12,11 +12,18 @@ def exec_command(sock, str, pid):
         cmd = str[:i]
         str = str[i+2:]
         
-        r = r and GeisterServer().command(cmd, pid)
+        r = GeisterServer().command(cmd, pid)
         GeisterServer().print_board()
+        print(cmd)
+        print(r)
                     
     if r :
-        sock.send(b"OK")
+        
+        if GeisterServer().status() == GeisterServer.WAIT_FOR_PLAYER0:
+            conn[0].send(GeisterServer().encode_board(0).encode())
+        elif GeisterServer().status() == GeisterServer.WAIT_FOR_PLAYER1:
+            conn[1].send(GeisterServer().encode_board(1).encode())
+                    
     else :
         sock.send(b"NG")
 
@@ -41,24 +48,25 @@ def main():
         while True:
             rready, wready, xready = select.select(readfds, [], [])
             for sock in rready:
-                if sock is server_sock[0]:
+                if sock is server_sock[0] and conn[0] is None:
                     conn[0], address = server_sock[0].accept()
                     readfds.add(conn[0])
-                elif sock is server_sock[1]:
+                    conn[0].send(b"SET?")
+                elif sock is server_sock[1] and conn[1] is None:
                     conn[1], address = server_sock[1].accept()
                     readfds.add(conn[1])
+                    conn[1].send(b"SET?")
                 else:
-                    m = sock.recv(bufsize)
                     if sock is conn[0]:
                         pid = 0
                     elif sock is conn[1]:
                         pid = 1
                     else:
-                        sock.send(b"NG")
-                        contine
+                        continue
                         
+                    m = sock.recv(bufsize)
                     msg[pid] = msg[pid] + m.decode('UTF-8')
-                    msg[pid] = exec_command(sock, msg[pid], pid)
+                    msg[pid] = exec_command(sock, conn, msg[pid], pid)
 
     finally:
         for sock in readfds:
