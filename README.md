@@ -43,10 +43,10 @@ Geister用のゲームサーバ(作りかけ)．
 - クライアント: 後手番のクライアントは手を打ち，recvする．
 
 ## 実行例
-サーバー
+### サーバー
     %run socket_server.py
 
-クライアント0(先手番):
+### クライアント0(先手番):
     In [123]: s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     In [124]: s.connect(("localhost", 10000)); s.recv(4096)
     Out[124]: b'SET?'
@@ -55,7 +55,7 @@ Geister用のゲームサーバ(作りかけ)．
     In [126]: s.send(b"MOV:A,NORTH\r\n"); s.recv(4096) # クライアント1のMOVコマンド完了(In[158])までブロック
     Out[126]: b'13R24R34R44R15B25B35B45B42u31u21u11u40u30u20u10u'
 
-クライアント1(後手番):
+### クライアント1(後手番):
     In [155]: s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     In [156]: s.connect(("localhost", 10001)); s.recv(4096)
     Out[156]: b'SET?'
