@@ -71,8 +71,8 @@ class GeisterServer(object):
                         self.__status = GeisterServer.WAIT_FOR_PLAYER1
                     else:
                         self.__status = GeisterServer.WAIT_FOR_PLAYER0
-                else:
-                    flag = False
+            else:
+                flag = False
 
         else:
             flag = False
@@ -138,7 +138,7 @@ class Board:
 
     def encode_item(self, item, mine):
         x = item.x
-        y = item.x
+        y = item.y
         c = item.color
         s = ""
         if mine:
