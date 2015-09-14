@@ -23,7 +23,13 @@ def exec_command(sock, conn, str, pid):
             conn[0].send(GeisterServer().encode_board(0).encode())
         elif GeisterServer().status() == GeisterServer.WAIT_FOR_PLAYER1:
             conn[1].send(GeisterServer().encode_board(1).encode())
-                    
+        elif GeisterServer().status() == GeisterServer.GAME_END:
+            winner = GeisterServer().winner()
+            looser = 1 if winner == 0 else 1
+            conn[winner].send(b'WON'); conn[winner].close(); conn[winner] = None
+            conn[looser].send(b'LOST'); conn[looser].close(); conn[looser] = None
+            GeisterServer().server_init()
+            
     else :
         sock.send(b"NG")
 
@@ -67,6 +73,8 @@ def main():
                     m = sock.recv(bufsize)
                     msg[pid] = msg[pid] + m.decode('UTF-8')
                     msg[pid] = exec_command(sock, conn, msg[pid], pid)
+                    if conn[0] is None and conn[1] is None:
+                        readfds = set(server_sock)
 
     finally:
         for sock in readfds:

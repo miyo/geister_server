@@ -17,29 +17,26 @@ class GeisterServer(object):
     WAIT_FOR_INITIALIZATION = 1
     WAIT_FOR_PLAYER0 = 2
     WAIT_FOR_PLAYER1 = 3
-    WAIT_FOR_GAMEEND = 4
+    GAME_END = 4
     
     def __init__(self):
         if(self.__initialized):
             return
         self.__initialized = True
+        self.server_init()
+
+    def server_init(self):
         self.player = [Player(), Player()]
         self.board = Board(self.player)
         self.set_done = [False, False]
         self.__status = GeisterServer.WAIT_FOR_INITIALIZATION
-
-    def start(self):
-        """
-        - open socket for 2 clients
-        - attach each player instance for each client
-        """
-        pass
-
-    def turn(self):
-        pass
+        self.__winner = 0
 
     def status(self):
         return self.__status
+    
+    def winner(self):
+        return self.__winner
 
     __SET_COMMAND = re.compile('^SET:(\w*)')
     __MOV_COMMAND = re.compile('^MOV:(\w*),(\w*)')
@@ -67,10 +64,17 @@ class GeisterServer(object):
                 d = Direction.dir(m.group(2).upper())
                 if d != None and ord("A") <= ord(k) and ord(k) <= ord("H") :
                     flag = self.player[pid].move_item(k, d)
-                    if self.__status == GeisterServer.WAIT_FOR_PLAYER0:
-                        self.__status = GeisterServer.WAIT_FOR_PLAYER1
-                    else:
-                        self.__status = GeisterServer.WAIT_FOR_PLAYER0
+                    if flag:
+                        j = self.judgement()
+                        print("judge:", end=""); print(j)
+                        if j:
+                            self.__status = GeisterServer.GAME_END
+                        else:
+                            self.__status = GeisterServer.WAIT_FOR_PLAYER1 \
+                                            if self.__status == GeisterServer.WAIT_FOR_PLAYER0 \
+                                            else GeisterServer.WAIT_FOR_PLAYER0
+                else:
+                    flag = False
             else:
                 flag = False
 
@@ -78,6 +82,27 @@ class GeisterServer(object):
             flag = False
         print(flag)
         return flag
+
+    def judgement(self):
+        for pid in range(2):
+            taken_blue = 0
+            taken_red = 0
+            for i in self.player[pid].items.values():
+                if i.x == Board.ESCAPED_MARK:
+                    self.__winner = pid
+                    return True # exit
+                elif i.x == Board.TAKEN_MARK:
+                    if i.color == ItemColor.RED:
+                        taken_red += 1
+                    else:
+                        taken_blue += 1
+            if taken_blue == 4:
+                self.__winner = 1 if pid == 0 else 1 # opposite player won
+                return True
+            elif taken_red == 4:
+                self.__winner = pid
+                return True
+        return False
 
     def encode_board(self, pid):
         return self.board.encode_board(pid)
