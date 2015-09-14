@@ -20,18 +20,25 @@ def exec_command(sock, conn, str, pid):
     if r :
         
         if GeisterServer().status() == GeisterServer.WAIT_FOR_PLAYER0:
-            conn[0].send(GeisterServer().encode_board(0).encode())
+            conn[0].send(b'MOV?' + GeisterServer().encode_board(0).encode() + b"\r\n")
         elif GeisterServer().status() == GeisterServer.WAIT_FOR_PLAYER1:
-            conn[1].send(GeisterServer().encode_board(1).encode())
+            conn[1].send(b'MOV?' + GeisterServer().encode_board(1).encode() + b"\r\n")
         elif GeisterServer().status() == GeisterServer.GAME_END:
             winner = GeisterServer().winner()
-            looser = 1 if winner == 0 else 1
-            conn[winner].send(b'WON'); conn[winner].close(); conn[winner] = None
-            conn[looser].send(b'LOST'); conn[looser].close(); conn[looser] = None
+            loser = 1 if winner == 0 else 1
+            
+            conn[winner].send(b'WON:' + GeisterServer().encode_board(0).encode() + b'\r\n')
+            conn[winner].close()
+            conn[winner] = None
+            
+            conn[loser].send(b'LST:' + GeisterServer().encode_board(1).encode() + b'\r\n')
+            conn[loser].close()
+            conn[loser] = None
+            
             GeisterServer().server_init()
             
     else :
-        sock.send(b"NG")
+        sock.send(b"NG\r\n")
 
     return str
 
@@ -57,11 +64,11 @@ def main():
                 if sock is server_sock[0] and conn[0] is None:
                     conn[0], address = server_sock[0].accept()
                     readfds.add(conn[0])
-                    conn[0].send(b"SET?")
+                    conn[0].send(b"SET?\r\n")
                 elif sock is server_sock[1] and conn[1] is None:
                     conn[1], address = server_sock[1].accept()
                     readfds.add(conn[1])
-                    conn[1].send(b"SET?")
+                    conn[1].send(b"SET?\r\n")
                 else:
                     if sock is conn[0]:
                         pid = 0
