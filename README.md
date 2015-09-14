@@ -67,7 +67,7 @@ Geister用のゲームサーバ(作りかけ)．
     In [13]: s.send(b"MOV:A,WEST\r\n"); s.recv(4096)
     Out[13]: b'WON:88b24B34B99b15R25R35R99r55u31u21u99r40u30u20u99b\r\n' # 勝負がついた．こちらの勝ちと終局情報
 
-### クライアント1(後手番)iPythonでインタラクティブ入力の例:
+### クライアント1(後手番)/iPythonでインタラクティブ入力の例:
     In [2]: import socket
     In [3]: s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     In [4]: s.connect(("localhost", 10001)); s.recv(4096)
