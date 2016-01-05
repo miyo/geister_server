@@ -347,7 +347,7 @@ class Item:
             self.x = Board.ESCAPED_MARK
             self.y = Board.ESCAPED_MARK
             return True
-        elif self.x == 5 and self.y == 0 and (d == Direction.NORTH or d == Direction.EAST) and self.color == ItemColorBLUE:
+        elif self.x == 5 and self.y == 0 and (d == Direction.NORTH or d == Direction.EAST) and self.color == ItemColor.BLUE:
             self.x = Board.ESCAPED_MARK
             self.y = Board.ESCAPED_MARK
             return True
